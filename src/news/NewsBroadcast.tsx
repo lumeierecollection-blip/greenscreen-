@@ -34,6 +34,7 @@ export const newsChromaKey: ChromaKeyOptions = {
   softness: 28,
   spillSuppression: 0.9,
   minBrightness: 24,
+  edgeBlur: 1.5,
 };
 
 export const newsBroadcastDefaults: NewsBroadcastProps = {
@@ -46,7 +47,7 @@ export const newsBroadcastDefaults: NewsBroadcastProps = {
   network: 'NW News',
   clock: '20:00',
   headline: 'Breaking',
-  name: 'Live Report',
+  name: 'Lebo Sijabala',
   role: 'Studio Correspondent',
   tickerLabel: 'Breaking',
   tickerHeadlines: [

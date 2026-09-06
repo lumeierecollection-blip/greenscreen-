@@ -66,17 +66,33 @@ itself, so swapping in a different clip needs no code change.
 
 ## The news studio
 
-`NewsBroadcast` builds the whole set in code, no stock footage. Behind the
-anchor is a wall of lit panels that breathe on separate cycles, a wireframe
-globe whose meridians swing as it turns, an anchor desk, and a highlight
-drifting slowly across the set. On top sit the graphics a broadcast carries: a
-network bug, a pulsing LIVE pill with a clock, a lower third that springs in
-from the left, and a crawl along the bottom that loops seamlessly by measuring
-its own text.
+`NewsBroadcast` builds the whole set in code, no stock footage — the sandbox
+this runs in has no general internet access, only code registries like npm and
+GitHub, so a real photo background isn't fetchable here. Behind the anchor is
+an out-of-focus wall of screens, warm bokeh from practical lights, and a
+glossy floor with a soft reflection, blurred and graded like something a
+camera actually shot rather than a flat vector render. On top sit the graphics
+a broadcast carries: a network bug, a pulsing LIVE pill with a clock, a lower
+third that springs in from the left, and a crawl along the bottom that loops
+seamlessly by measuring its own text.
 
 The frame is fixed at 720x1280 so the graphics keep their proportions whatever
 the source clip measures. The anchor is scaled to cover it, and `anchorZoom`,
 `anchorOffsetX` and `anchorOffsetY` reposition her within the frame.
+
+If you'd rather composite onto an actual photographed studio, drop the image
+into `public/` and swap `StudioBackground` in `NewsBroadcast.tsx` for an `Img`
+the same way the `Greenscreen` composition uses `background.jpg` — the keying
+and graphics layers don't change.
+
+### Clean edges
+
+The cutout computes an alpha value per pixel first, then box-blurs the whole
+alpha mask before applying it (`chroma-key.ts`, `edgeBlur`). Thresholding
+pixels independently leaves a jagged, blocky edge wherever video compression
+has softened the boundary; blurring only the mask — never the colour —
+rounds that into the kind of soft edge a camera lens produces, which is what
+keeps the cutout from reading as a green screen.
 
 Every piece of text is a prop. To put a real name on the banner:
 

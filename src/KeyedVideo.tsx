@@ -68,7 +68,7 @@ export const KeyedVideo: React.FC<{
       context.drawImage(frame, left, top, drawWidth, drawHeight);
 
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      applyChromaKey(imageData.data, chromaKey);
+      applyChromaKey(imageData.data, canvas.width, canvas.height, chromaKey);
       context.putImageData(imageData, 0, 0);
     },
     [chromaKey, offsetX, offsetY, zoom],

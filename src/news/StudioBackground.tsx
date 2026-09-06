@@ -9,51 +9,84 @@ export type StudioPalette = {
 };
 
 export const defaultStudioPalette: StudioPalette = {
-  deep: '#04091c',
-  mid: '#0d2350',
-  glow: '#1d5bb0',
-  accent: '#3fa9ff',
+  deep: '#050b1a',
+  mid: '#12294f',
+  glow: '#2f6fb8',
+  accent: '#5aa3e8',
 };
 
-/** The wall of screens behind the desk, drawn as a row of lit panels. */
+/**
+ * Grain, a lens vignette and a very slight chromatic fringe at the corners.
+ * These three are what separate a photographed set from a flat render, and
+ * cost nothing to keep animating since the noise pattern is baked once into
+ * an SVG filter rather than recomputed per frame.
+ */
+const FilmTexture: React.FC = () => (
+  <AbsoluteFill style={{pointerEvents: 'none'}}>
+    <svg width="100%" height="100%" style={{position: 'absolute', inset: 0}}>
+      <defs>
+        <filter id="grain">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.9"
+            numOctaves="2"
+            stitchTiles="stitch"
+            result="noise"
+          />
+          <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0" />
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" filter="url(#grain)" />
+    </svg>
+    <AbsoluteFill
+      style={{
+        background:
+          'radial-gradient(120% 80% at 50% 40%, transparent 45%, rgba(0,0,0,0.55) 100%)',
+      }}
+    />
+  </AbsoluteFill>
+);
+
+/**
+ * Out-of-focus screens along the back wall. Real studio walls are lit panels
+ * seen well behind the anchor's plane of focus, so they are drawn softly
+ * blurred and desaturated rather than as crisp shapes; a sharp grid of
+ * rectangles is the single biggest tell that a background is a render.
+ */
 const VideoWall: React.FC<{palette: StudioPalette; scale: number}> = ({
   palette,
   scale,
 }) => {
   const frame = useCurrentFrame();
-  const panels = 9;
+  const panels = 6;
 
   return (
     <div
       style={{
         position: 'absolute',
-        top: 0,
-        left: -40 * scale,
-        right: -40 * scale,
-        height: 900 * scale,
+        top: -30 * scale,
+        left: -80 * scale,
+        right: -80 * scale,
+        height: 760 * scale,
         display: 'flex',
-        gap: 6 * scale,
-        transform: 'perspective(1400px) rotateX(4deg)',
-        transformOrigin: 'top center',
+        gap: 14 * scale,
+        filter: `blur(${7 * scale}px)`,
+        opacity: 0.85,
       }}
     >
       {new Array(panels).fill(true).map((_, i) => {
-        // Each panel breathes on its own slow cycle so the wall never reads as
-        // a flat gradient.
-        const phase = Math.sin((frame / 70) * Math.PI + i * 0.8);
-        const brightness = interpolate(phase, [-1, 1], [0.55, 1]);
+        const phase = Math.sin((frame / 90) * Math.PI + i * 1.1);
+        const brightness = interpolate(phase, [-1, 1], [0.5, 1]);
+        const hueShift = i % 2 === 0 ? palette.glow : palette.accent;
 
         return (
           <div
             key={i}
             style={{
               flex: 1,
-              background: `linear-gradient(180deg, ${palette.mid} 0%, ${palette.deep} 78%)`,
-              opacity: brightness,
-              borderTop: `${2 * scale}px solid ${palette.accent}`,
-              boxShadow: `inset 0 ${8 * scale}px ${24 * scale}px rgba(63,169,255,${
-                0.18 * brightness
-              })`,
+              background: `linear-gradient(200deg, ${hueShift} 0%, ${palette.mid} 45%, ${palette.deep} 100%)`,
+              opacity: brightness * 0.9,
+              borderRadius: 6 * scale,
             }}
           />
         );
@@ -62,88 +95,57 @@ const VideoWall: React.FC<{palette: StudioPalette; scale: number}> = ({
   );
 };
 
-/** A slowly turning wireframe globe, the stock centrepiece of a news set. */
-const Globe: React.FC<{palette: StudioPalette; scale: number}> = ({
-  palette,
-  scale,
-}) => {
+/**
+ * Soft circular practical lights, the warm bokeh a real key/fill rig throws
+ * onto the set behind the talent. Kept blurred and low-contrast so they read
+ * as photographed light sources, not graphic elements.
+ */
+const PracticalLights: React.FC<{scale: number}> = ({scale}) => {
   const frame = useCurrentFrame();
-  const radius = 210 * scale;
-  const meridians = 7;
+  const lights = [
+    {x: 0.14, y: 0.16, r: 150, color: 'rgba(255,214,170,0.5)', period: 130},
+    {x: 0.82, y: 0.1, r: 190, color: 'rgba(120,180,255,0.4)', period: 160},
+    {x: 0.92, y: 0.34, r: 110, color: 'rgba(255,190,140,0.35)', period: 95},
+    {x: 0.06, y: 0.4, r: 120, color: 'rgba(140,190,255,0.3)', period: 110},
+  ];
 
   return (
-    <svg
-      width={radius * 2}
-      height={radius * 2}
-      viewBox={`0 0 ${radius * 2} ${radius * 2}`}
-      style={{
-        position: 'absolute',
-        left: `calc(50% - ${radius}px)`,
-        top: 150 * scale,
-        opacity: 0.5,
-      }}
-    >
-      <defs>
-        <radialGradient id="globe-glow">
-          <stop offset="45%" stopColor={palette.glow} stopOpacity={0.45} />
-          <stop offset="100%" stopColor={palette.glow} stopOpacity={0} />
-        </radialGradient>
-      </defs>
-      <circle cx={radius} cy={radius} r={radius} fill="url(#globe-glow)" />
-      <circle
-        cx={radius}
-        cy={radius}
-        r={radius * 0.72}
-        fill="none"
-        stroke={palette.accent}
-        strokeWidth={1.6 * scale}
-        opacity={0.8}
-      />
-      {new Array(meridians).fill(true).map((_, i) => {
-        // Rotating a sphere makes each meridian's projected width swing
-        // between full and zero, which is all an ellipse needs to fake it.
-        const angle = (i / meridians) * Math.PI + frame / 220;
-        const rx = Math.abs(Math.cos(angle)) * radius * 0.72;
+    <AbsoluteFill style={{filter: `blur(${26 * scale}px)`}}>
+      {lights.map((light, i) => {
+        const flicker = interpolate(
+          Math.sin((frame / light.period) * Math.PI * 2),
+          [-1, 1],
+          [0.75, 1],
+        );
 
         return (
-          <ellipse
+          <div
             key={i}
-            cx={radius}
-            cy={radius}
-            rx={Math.max(rx, 0.5)}
-            ry={radius * 0.72}
-            fill="none"
-            stroke={palette.accent}
-            strokeWidth={1.2 * scale}
-            opacity={0.5}
+            style={{
+              position: 'absolute',
+              left: `${light.x * 100}%`,
+              top: `${light.y * 100}%`,
+              width: light.r * scale,
+              height: light.r * scale,
+              marginLeft: (-light.r * scale) / 2,
+              marginTop: (-light.r * scale) / 2,
+              borderRadius: '50%',
+              background: light.color,
+              opacity: flicker,
+            }}
           />
         );
       })}
-      {[-0.42, -0.15, 0.15, 0.42].map((offset) => {
-        const ry = radius * 0.72;
-        const cy = radius + offset * ry * 2;
-        const rx = Math.sqrt(Math.max(1 - (offset * 2) ** 2, 0.01)) * ry;
-
-        return (
-          <ellipse
-            key={offset}
-            cx={radius}
-            cy={cy}
-            rx={rx}
-            ry={ry * 0.12}
-            fill="none"
-            stroke={palette.accent}
-            strokeWidth={1.2 * scale}
-            opacity={0.4}
-          />
-        );
-      })}
-    </svg>
+    </AbsoluteFill>
   );
 };
 
-/** The anchor desk, seen from just above its front edge. */
-const Desk: React.FC<{palette: StudioPalette; scale: number}> = ({
+/**
+ * Glossy studio floor beneath the desk, with a faint upward reflection. Real
+ * broadcast floors are polished, and that reflected glow is what visually
+ * anchors a subject to the ground instead of a flat colour fill.
+ */
+const Floor: React.FC<{palette: StudioPalette; scale: number}> = ({
   palette,
   scale,
 }) => (
@@ -153,49 +155,53 @@ const Desk: React.FC<{palette: StudioPalette; scale: number}> = ({
       left: -80 * scale,
       right: -80 * scale,
       bottom: 0,
-      height: 430 * scale,
-      background: `linear-gradient(180deg, ${palette.mid} 0%, ${palette.deep} 55%)`,
-      borderTop: `${3 * scale}px solid ${palette.accent}`,
-      boxShadow: `0 ${-12 * scale}px ${40 * scale}px rgba(4,9,28,0.9)`,
-      transform: 'perspective(900px) rotateX(-10deg)',
-      transformOrigin: 'top center',
+      height: 520 * scale,
+      // The top starts transparent and eases into the floor colour, so this
+      // layer blends into the wall behind it instead of cutting a hard line
+      // across the frame.
+      background: `linear-gradient(180deg, transparent 0%, ${palette.mid} 30%, ${palette.deep} 65%)`,
+      overflow: 'hidden',
     }}
-  />
+  >
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: '20%',
+        right: '20%',
+        height: '55%',
+        background: `radial-gradient(60% 100% at 50% 0%, ${palette.accent}55 0%, transparent 70%)`,
+        filter: `blur(${20 * scale}px)`,
+      }}
+    />
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background:
+          'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.05) 40%, transparent 55%)',
+      }}
+    />
+  </div>
 );
 
 export const StudioBackground: React.FC<{palette: StudioPalette}> = ({
   palette,
 }) => {
   const {width} = useVideoConfig();
-  const frame = useCurrentFrame();
   const scale = width / 720;
-
-  // A soft highlight drifting across the set, so the backdrop is never static.
-  const sweep = interpolate(frame % 300, [0, 300], [-60, 160]);
 
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(120% 70% at 50% 28%, ${palette.mid} 0%, ${palette.deep} 70%)`,
+        background: `radial-gradient(130% 90% at 50% 22%, ${palette.mid} 0%, ${palette.deep} 75%)`,
         overflow: 'hidden',
       }}
     >
       <VideoWall palette={palette} scale={scale} />
-      <Globe palette={palette} scale={scale} />
-      <Desk palette={palette} scale={scale} />
-      <AbsoluteFill
-        style={{
-          background: `linear-gradient(100deg, transparent ${sweep - 25}%, rgba(63,169,255,0.10) ${sweep}%, transparent ${
-            sweep + 25
-          }%)`,
-        }}
-      />
-      <AbsoluteFill
-        style={{
-          background:
-            'radial-gradient(80% 55% at 50% 45%, transparent 40%, rgba(2,5,14,0.85) 100%)',
-        }}
-      />
+      <PracticalLights scale={scale} />
+      <Floor palette={palette} scale={scale} />
+      <FilmTexture />
     </AbsoluteFill>
   );
 };
