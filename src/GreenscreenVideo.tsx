@@ -8,6 +8,8 @@ export type GreenscreenVideoProps = {
   backgroundSrc: string;
   /** Clockwise rotation applied to the background photo, in degrees. */
   backgroundRotation: 0 | 90 | 180 | 270;
+  /** Mirrors the background photo left-to-right. */
+  backgroundFlip?: boolean;
   chromaKey: ChromaKeyOptions;
 };
 
@@ -15,13 +17,15 @@ export const greenscreenVideoDefaults: GreenscreenVideoProps = {
   videoSrc: 'greenscreen.mp4',
   backgroundSrc: 'background.jpg',
   backgroundRotation: 90,
+  backgroundFlip: false,
   chromaKey: defaultChromaKeyOptions,
 };
 
-const RotatedBackground: React.FC<{src: string; rotation: number}> = ({
-  src,
-  rotation,
-}) => {
+const RotatedBackground: React.FC<{
+  src: string;
+  rotation: number;
+  flip?: boolean;
+}> = ({src, rotation, flip}) => {
   const {width, height} = useVideoConfig();
   const swapped = rotation === 90 || rotation === 270;
   const boxWidth = swapped ? height : width;
@@ -36,7 +40,7 @@ const RotatedBackground: React.FC<{src: string; rotation: number}> = ({
           height: boxHeight,
           left: (width - boxWidth) / 2,
           top: (height - boxHeight) / 2,
-          transform: `rotate(${rotation}deg)`,
+          transform: `rotate(${rotation}deg) scaleX(${flip ? -1 : 1})`,
         }}
       >
         <Img
@@ -52,6 +56,7 @@ export const GreenscreenVideo: React.FC<GreenscreenVideoProps> = ({
   videoSrc,
   backgroundSrc,
   backgroundRotation,
+  backgroundFlip,
   chromaKey,
 }) => {
   return (
@@ -59,6 +64,7 @@ export const GreenscreenVideo: React.FC<GreenscreenVideoProps> = ({
       <RotatedBackground
         src={staticFile(backgroundSrc)}
         rotation={backgroundRotation}
+        flip={backgroundFlip}
       />
       <KeyedVideo src={videoSrc} chromaKey={chromaKey} />
     </AbsoluteFill>
