@@ -1,7 +1,12 @@
 # Greenscreen
 
-A [Remotion](https://www.remotion.dev) project that replaces the green backdrop
-in `public/greenscreen.mp4` with the photo in `public/background.jpg`.
+A [Remotion](https://www.remotion.dev) project that replaces green screen
+backdrops. Two compositions:
+
+| Composition | What it makes |
+| --- | --- |
+| `Greenscreen` | Puts the photo in `public/background.jpg` behind the subject |
+| `NewsBroadcast` | Drops the subject into a news studio with full broadcast graphics |
 
 ## How it works
 
@@ -22,7 +27,8 @@ glow against the new background.
 ```
 npm install
 npm run dev      # open Remotion Studio
-npm run render   # write out/video.mp4
+npm run render   # write out/video.mp4 (photo background)
+npm run render:news  # write out/news-broadcast.mp4 (news studio)
 npm run still    # write out/frame.png
 ```
 
@@ -55,5 +61,32 @@ npx remotion render Greenscreen out/video.mp4 \
   --props='{"videoSrc":"greenscreen.mp4","backgroundSrc":"background.jpg","backgroundRotation":90,"chromaKey":{"threshold":70,"softness":35,"spillSuppression":0.9,"minBrightness":24}}'
 ```
 
-The composition's size and duration are read from the video file itself, so
-swapping in a different clip needs no code change.
+The `Greenscreen` composition takes its size and duration from the video file
+itself, so swapping in a different clip needs no code change.
+
+## The news studio
+
+`NewsBroadcast` builds the whole set in code, no stock footage. Behind the
+anchor is a wall of lit panels that breathe on separate cycles, a wireframe
+globe whose meridians swing as it turns, an anchor desk, and a highlight
+drifting slowly across the set. On top sit the graphics a broadcast carries: a
+network bug, a pulsing LIVE pill with a clock, a lower third that springs in
+from the left, and a crawl along the bottom that loops seamlessly by measuring
+its own text.
+
+The frame is fixed at 720x1280 so the graphics keep their proportions whatever
+the source clip measures. The anchor is scaled to cover it, and `anchorZoom`,
+`anchorOffsetX` and `anchorOffsetY` reposition her within the frame.
+
+Every piece of text is a prop. To put a real name on the banner:
+
+```
+npx remotion render NewsBroadcast out/news-broadcast.mp4 \
+  --props='{"name":"Her Name","role":"Senior Correspondent","headline":"Breaking","network":"NW News","clock":"20:00","tickerLabel":"Breaking","tickerHeadlines":["First headline","Second headline"],"tickerSpeed":90,"lowerThirdStart":20,"videoSrc":"greenscreen-news.mp4","anchorZoom":1,"anchorOffsetX":0,"anchorOffsetY":0}'
+```
+
+Editing them in Remotion Studio is easier than passing the whole prop object.
+The studio colours come from `palette`, so the set can be recoloured without
+touching the components. This second clip is lit unevenly, with the backdrop
+scoring 67 to 144 and the anchor never above 1, so it uses a slightly lower
+threshold of its own.

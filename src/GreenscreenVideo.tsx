@@ -1,6 +1,7 @@
-import React, {useCallback, useRef} from 'react';
-import {AbsoluteFill, Img, OffthreadVideo, staticFile, useVideoConfig} from 'remotion';
-import {applyChromaKey, ChromaKeyOptions, defaultChromaKeyOptions} from './chroma-key';
+import React from 'react';
+import {AbsoluteFill, Img, staticFile, useVideoConfig} from 'remotion';
+import {ChromaKeyOptions, defaultChromaKeyOptions} from './chroma-key';
+import {KeyedVideo} from './KeyedVideo';
 
 export type GreenscreenVideoProps = {
   videoSrc: string;
@@ -53,49 +54,13 @@ export const GreenscreenVideo: React.FC<GreenscreenVideoProps> = ({
   backgroundRotation,
   chromaKey,
 }) => {
-  const {width, height} = useVideoConfig();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const onVideoFrame = useCallback(
-    (frame: CanvasImageSource) => {
-      const canvas = canvasRef.current;
-      if (!canvas) {
-        return;
-      }
-
-      const context = canvas.getContext('2d');
-      if (!context) {
-        return;
-      }
-
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(frame, 0, 0, canvas.width, canvas.height);
-
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      applyChromaKey(imageData.data, chromaKey);
-      context.putImageData(imageData, 0, 0);
-    },
-    [chromaKey],
-  );
-
   return (
     <AbsoluteFill style={{backgroundColor: 'black'}}>
       <RotatedBackground
         src={staticFile(backgroundSrc)}
         rotation={backgroundRotation}
       />
-      {/*
-        The video itself is never shown. It decodes frames, hands each one to
-        the canvas for keying, and keeps its audio track in the render.
-      */}
-      <OffthreadVideo
-        src={staticFile(videoSrc)}
-        onVideoFrame={onVideoFrame}
-        style={{opacity: 0, position: 'absolute'}}
-      />
-      <AbsoluteFill>
-        <canvas ref={canvasRef} width={width} height={height} />
-      </AbsoluteFill>
+      <KeyedVideo src={videoSrc} chromaKey={chromaKey} />
     </AbsoluteFill>
   );
 };

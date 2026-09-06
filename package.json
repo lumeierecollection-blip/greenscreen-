@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "remotion studio",
     "render": "remotion render Greenscreen out/video.mp4",
-    "still": "remotion still Greenscreen out/frame.png"
+    "still": "remotion still Greenscreen out/frame.png",
+    "render:news": "remotion render NewsBroadcast out/news-broadcast.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.410",
+    "@remotion/layout-utils": "^4.0.410",
     "@remotion/media-parser": "^4.0.410",
     "@remotion/media-utils": "4.0.410",
     "react": "19.0.0",
