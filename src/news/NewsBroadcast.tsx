@@ -3,6 +3,7 @@ import {AbsoluteFill} from 'remotion';
 import {ChromaKeyOptions} from '../chroma-key';
 import {KeyedVideo} from '../KeyedVideo';
 import {NewsOverlay} from './Graphics';
+import {churchHeadlines, TimedHeadline} from './headlines';
 import {defaultStudioPalette, StudioBackground, StudioPalette} from './StudioBackground';
 
 export type NewsBroadcastProps = {
@@ -15,13 +16,8 @@ export type NewsBroadcastProps = {
   palette: StudioPalette;
   network: string;
   clock: string;
-  headline: string;
-  name: string;
-  role: string;
-  tickerLabel: string;
-  tickerHeadlines: string[];
+  headlines: TimedHeadline[];
   tickerSpeed: number;
-  lowerThirdStart: number;
 };
 
 /**
@@ -44,19 +40,10 @@ export const newsBroadcastDefaults: NewsBroadcastProps = {
   anchorOffsetX: 0,
   anchorOffsetY: 0,
   palette: defaultStudioPalette,
-  network: 'NW News',
+  network: 'CFC',
   clock: '20:00',
-  headline: 'Breaking',
-  name: 'Lebo Sijabala',
-  role: 'Studio Correspondent',
-  tickerLabel: 'Breaking',
-  tickerHeadlines: [
-    'Live from the studio',
-    'Full coverage continues through the hour',
-    'Reporting from the newsroom',
-  ],
+  headlines: churchHeadlines,
   tickerSpeed: 90,
-  lowerThirdStart: 20,
 };
 
 export const NewsBroadcast: React.FC<NewsBroadcastProps> = ({
@@ -66,7 +53,10 @@ export const NewsBroadcast: React.FC<NewsBroadcastProps> = ({
   anchorOffsetX,
   anchorOffsetY,
   palette,
-  ...overlay
+  network,
+  clock,
+  headlines,
+  tickerSpeed,
 }) => {
   return (
     <AbsoluteFill style={{backgroundColor: palette.deep}}>
@@ -79,7 +69,12 @@ export const NewsBroadcast: React.FC<NewsBroadcastProps> = ({
         offsetY={anchorOffsetY}
         filter="drop-shadow(0 10px 26px rgba(0,0,0,0.6))"
       />
-      <NewsOverlay {...overlay} />
+      <NewsOverlay
+        network={network}
+        clock={clock}
+        headlines={headlines}
+        tickerSpeed={tickerSpeed}
+      />
     </AbsoluteFill>
   );
 };

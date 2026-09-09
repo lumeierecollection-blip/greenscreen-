@@ -7,6 +7,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 import {measureText} from '@remotion/layout-utils';
+import {getHeadlineAtTime, TimedHeadline} from './headlines';
 
 export const NEWS_FONT = 'Liberation Sans, Arial, Helvetica, sans-serif';
 
@@ -64,7 +65,11 @@ export const LiveBadge: React.FC<{clock: string; scale: number}> = ({
   scale,
 }) => {
   const frame = useCurrentFrame();
-  const pulse = interpolate(Math.sin((frame / 15) * Math.PI), [-1, 1], [0.35, 1]);
+  const pulse = interpolate(
+    Math.sin((frame / 15) * Math.PI),
+    [-1, 1],
+    [0.35, 1],
+  );
 
   return (
     <div
@@ -125,107 +130,97 @@ export const LiveBadge: React.FC<{clock: string; scale: number}> = ({
   );
 };
 
-/** Name and role banner, sliding in over the anchor's shoulder. */
-export const LowerThird: React.FC<{
-  headline: string;
-  name: string;
-  role: string;
+/**
+ * Main headline bar — red, full width, shows the current timed headline.
+ * Slides in from the left when a headline appears and slides out when it ends.
+ */
+export const HeadlineBar: React.FC<{
+  headlines: TimedHeadline[];
   scale: number;
-  startFrame: number;
-}> = ({headline, name, role, scale, startFrame}) => {
+}> = ({headlines, scale}) => {
   const frame = useCurrentFrame();
-  const {fps, width} = useVideoConfig();
+  const {fps} = useVideoConfig();
+  const timeSec = frame / fps;
 
-  const enter = spring({
+  const active = getHeadlineAtTime(headlines, timeSec);
+
+  if (!active) {
+    return null;
+  }
+
+  /* Animate the bar entering (first 8 frames) and leaving (last 8 frames). */
+  const startFrame = active.startSec * fps;
+  const endFrame = active.endSec * fps;
+  const enterProgress = spring({
     frame: frame - startFrame,
     fps,
-    config: {damping: 200, mass: 0.7},
+    config: {damping: 200, mass: 0.6},
   });
-  const slide = interpolate(enter, [0, 1], [-width, 0]);
-  const headlineEnter = spring({
-    frame: frame - startFrame - 8,
-    fps,
-    config: {damping: 200, mass: 0.7},
-  });
+  const framesUntilEnd = endFrame - frame;
+  const exitProgress =
+    framesUntilEnd < 10
+      ? interpolate(framesUntilEnd, [0, 10], [0, 1], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        })
+      : 1;
+
+  const opacity = Math.min(enterProgress, exitProgress);
+  const slideX = interpolate(enterProgress, [0, 1], [-100, 0]);
 
   return (
     <div
       style={{
         position: 'absolute',
         left: 0,
-        bottom: 132 * scale,
+        right: 0,
+        bottom: 114 * scale,
+        height: 56 * scale,
+        background: RED,
+        display: 'flex',
+        alignItems: 'center',
         fontFamily: NEWS_FONT,
+        opacity,
+        transform: `translateX(${slideX}%)`,
+        boxShadow: `0 ${4 * scale}px ${18 * scale}px rgba(0,0,0,0.5)`,
       }}
     >
       <div
         style={{
-          transform: `translateX(${interpolate(headlineEnter, [0, 1], [-width, 0])}px)`,
-          background: RED,
           color: 'white',
-          fontSize: 25 * scale,
+          fontSize: 28 * scale,
           fontWeight: 700,
           letterSpacing: 1.5 * scale,
-          padding: `${9 * scale}px ${20 * scale}px`,
-          marginLeft: 26 * scale,
-          display: 'inline-block',
+          padding: `0 ${24 * scale}px`,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          width: '100%',
         }}
       >
-        {headline.toUpperCase()}
-      </div>
-      <div
-        style={{
-          transform: `translateX(${slide}px)`,
-          marginTop: 5 * scale,
-          background:
-            'linear-gradient(90deg, rgba(6,17,46,0.96) 0%, rgba(11,36,86,0.92) 100%)',
-          borderLeft: `${6 * scale}px solid ${RED}`,
-          padding: `${13 * scale}px ${22 * scale}px ${15 * scale}px`,
-          maxWidth: width - 52 * scale,
-          marginLeft: 26 * scale,
-          boxShadow: `0 ${6 * scale}px ${22 * scale}px rgba(0,0,0,0.5)`,
-        }}
-      >
-        <div
-          style={{
-            color: 'white',
-            fontSize: 38 * scale,
-            fontWeight: 700,
-            letterSpacing: 0.5 * scale,
-            lineHeight: 1.1,
-          }}
-        >
-          {name.toUpperCase()}
-        </div>
-        <div
-          style={{
-            color: '#8fc4ff',
-            fontSize: 21 * scale,
-            fontWeight: 700,
-            letterSpacing: 2 * scale,
-            marginTop: 5 * scale,
-          }}
-        >
-          {role.toUpperCase()}
-        </div>
+        {active.text.toUpperCase()}
       </div>
     </div>
   );
 };
 
-/** Bottom crawl. The headlines repeat, so the strip never runs out. */
-export const Ticker: React.FC<{
-  label: string;
-  headlines: string[];
+/**
+ * Black scrolling ticker at the very bottom — continuously scrolls through
+ * all headline texts regardless of timing.
+ */
+export const ScrollingTicker: React.FC<{
+  headlines: TimedHeadline[];
   scale: number;
-  /** Pixels per second, before scaling. */
   speed: number;
-}> = ({label, headlines, scale, speed}) => {
+}> = ({headlines, scale, speed}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const height = 74 * scale;
-  const fontSize = 23 * scale;
+  const height = 58 * scale;
+  const fontSize = 22 * scale;
 
-  const segment = headlines.map((h) => h.toUpperCase()).join('     •     ') + '     •     ';
+  const segment =
+    headlines.map((h) => h.text.toUpperCase()).join('     •     ') +
+    '     •     ';
   const segmentWidth = measureText({
     text: segment,
     fontFamily: NEWS_FONT,
@@ -248,26 +243,10 @@ export const Ticker: React.FC<{
         display: 'flex',
         alignItems: 'stretch',
         fontFamily: NEWS_FONT,
-        background: 'rgba(4,9,28,0.94)',
-        borderTop: `${3 * scale}px solid ${RED}`,
+        background: 'rgba(0,0,0,0.92)',
+        borderTop: `${2 * scale}px solid ${RED}`,
       }}
     >
-      <div
-        style={{
-          background: RED,
-          color: 'white',
-          fontSize: 22 * scale,
-          fontWeight: 700,
-          letterSpacing: 2 * scale,
-          display: 'flex',
-          alignItems: 'center',
-          padding: `0 ${16 * scale}px`,
-          flexShrink: 0,
-          zIndex: 1,
-        }}
-      >
-        {label.toUpperCase()}
-      </div>
       <div style={{flex: 1, overflow: 'hidden', position: 'relative'}}>
         <div
           style={{
@@ -289,17 +268,16 @@ export const Ticker: React.FC<{
   );
 };
 
-/** Thin bar of colour that separates the crawl from the lower third. */
+/** Thin accent strip between headline bar and ticker. */
 export const AccentStrip: React.FC<{scale: number}> = ({scale}) => (
   <div
     style={{
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: 74 * scale,
-      height: 40 * scale,
-      background: 'linear-gradient(90deg, #0b2456 0%, #123a80 100%)',
-      borderTop: `${2 * scale}px solid rgba(63,169,255,0.5)`,
+      bottom: 58 * scale,
+      height: 56 * scale,
+      pointerEvents: 'none',
     }}
   />
 );
@@ -307,24 +285,9 @@ export const AccentStrip: React.FC<{scale: number}> = ({scale}) => (
 export const NewsOverlay: React.FC<{
   network: string;
   clock: string;
-  headline: string;
-  name: string;
-  role: string;
-  tickerLabel: string;
-  tickerHeadlines: string[];
+  headlines: TimedHeadline[];
   tickerSpeed: number;
-  lowerThirdStart: number;
-}> = ({
-  network,
-  clock,
-  headline,
-  name,
-  role,
-  tickerLabel,
-  tickerHeadlines,
-  tickerSpeed,
-  lowerThirdStart,
-}) => {
+}> = ({network, clock, headlines, tickerSpeed}) => {
   const {width} = useVideoConfig();
   const scale = width / 720;
 
@@ -332,20 +295,8 @@ export const NewsOverlay: React.FC<{
     <AbsoluteFill>
       <LogoBug name={network} scale={scale} />
       <LiveBadge clock={clock} scale={scale} />
-      <LowerThird
-        headline={headline}
-        name={name}
-        role={role}
-        scale={scale}
-        startFrame={lowerThirdStart}
-      />
-      <AccentStrip scale={scale} />
-      <Ticker
-        label={tickerLabel}
-        headlines={tickerHeadlines}
-        scale={scale}
-        speed={tickerSpeed}
-      />
+      <HeadlineBar headlines={headlines} scale={scale} />
+      <ScrollingTicker headlines={headlines} scale={scale} speed={tickerSpeed} />
     </AbsoluteFill>
   );
 };

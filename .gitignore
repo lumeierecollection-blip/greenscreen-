@@ -1,3 +1,5 @@
 node_modules
 out
 .remotion
+# Large source videos — download from Google Drive, don't commit
+public/source-video.mp4
